@@ -11,7 +11,7 @@ from src.routes.convert import convert_bp
 from src.routes.auth import auth_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdf#FGSgvasgf$5$WGT')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
 
 # Activer CORS pour permettre les requêtes cross-origin
@@ -43,6 +43,7 @@ def serve(path):
             return send_from_directory(static_folder_path, 'index.html')
         else:
             return "index.html not found", 404
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

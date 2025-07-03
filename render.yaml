@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: 3d-converter
+    name: 3d-oms-studio
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main_updated.py
