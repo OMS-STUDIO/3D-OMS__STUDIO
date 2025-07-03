@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D OMS__STUDIO - Convertisseur PNG vers OBJ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="advanced-styles.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #28a745;
+            --background-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-color: #333;
+            --surface-color: rgba(255, 255, 255, 0.95);
+            --border-radius: 20px;
+            --button-radius: 12px;
+            --shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            --user-name: "Utilisateur";
+            --user-surname: "Studio";
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            font-weight: 700;
+            animation: fadeInScale 0.8s ease-out;
+        }
+
+        .header .studio-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .header .studio-name::before {
+            content: var(--user-name) " " var(--user-surname);
+        }
+
+        .settings-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: var(--button-radius);
+            padding: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: slideInRight 0.8s ease-out 0.4s both;
+        }
+
+        .settings-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05) rotate(90deg);
+        }
+
+        .settings-button svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            transition: transform 0.3s ease;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 400px 1fr;
+            gap: 30px;
+            max-width: 1400px;
+            width: 100%;
+            align-items: start;
+            z-index: 10;
+        }
+
+        .upload-section {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+            opacity: 0;
+        }
+
+        .upload-section:hover::before {
+            opacity: 1;
+            animation: shimmer 2s infinite;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.98);
+            transform: translateY(-4px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .upload-section.dragover {
+            border-color: var(--primary-color);
+            background: #e8f2ff;
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .viewer-section {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeInScale 0.8s ease-out 0.8s both;
+            position: relative;
+        }
+
+        .viewer-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: var(--border-radius);
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .viewer-section:hover::after {
+            opacity: 1;
+        }
+
+        .viewer-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+            position: relative;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .viewer-container:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .viewer-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .viewer-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+            animation: pulse 2s infinite;
+        }
+
+        #threejs-viewer {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .controls-section {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 0.8s ease-out 1s both;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 30px;
+            border-radius: var(--button-radius);
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .file-input-button:hover::before {
+            left: 100%;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-preview {
+            margin-top: 20px;
+            display: none;
+            animation: fadeInScale 0.5s ease-out;
+        }
+
+        .file-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .file-preview img:hover {
+            transform: scale(1.05);
+        }
+
+        .file-info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .options-group {
+            margin-bottom: 25px;
+        }
+
+        .options-group h3 {
+            color: var(--text-color);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-item {
+            margin-bottom: 20px;
+        }
+
+        .option-item label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .option-item input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+            accent-color: var(--primary-color);
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .option-item input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        .range-value {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 0.9rem;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .convert-button {
+            background: linear-gradient(135deg, var(--accent-color), #20c997);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: var(--button-radius);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .convert-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .convert-button:hover:not(:disabled)::before {
+            left: 100%;
+        }
+
+        .convert-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .convert-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(45deg, 
+                transparent 25%, 
+                rgba(255, 255, 255, 0.2) 25%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 50%, 
+                transparent 75%, 
+                rgba(255, 255, 255, 0.2) 75%);
+            background-size: 20px 20px;
+            animation: progress-stripes 1s linear infinite;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .result-section {
+            display: none;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: var(--button-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            animation: fadeInScale 0.5s ease-out;
+        }
+
+        .result-section.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .download-button {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: var(--button-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Settings Modal */
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .settings-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeInScale 0.4s ease-out;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .settings-header h2 {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-button:hover {
+            background: #f0f0f0;
+            color: var(--text-color);
+            transform: rotate(90deg);
+        }
+
+        .setting-group {
+            margin-bottom: 25px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .setting-group input[type="text"],
+        .setting-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--button-radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .setting-group input[type="text"]:focus,
+        .setting-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .color-picker-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: var(--button-radius);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .color-picker:hover {
+            transform: scale(1.1);
+        }
+
+        .save-settings-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: var(--button-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-weight: 600;
+        }
+
+        .save-settings-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+            }
+            100% {
+                transform: translateX(200%) rotate(45deg);
+            }
+        }
+
+        @keyframes progress-stripes {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 20px 0;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .upload-section, .controls-section, .viewer-section {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .settings-content {
+                padding: 30px 20px;
+            }
+
+            .main-container {
+                gap: 15px;
+            }
+        }
+
+        /* Thèmes sombres */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface-color: rgba(40, 40, 40, 0.95);
+                --text-color: #ffffff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 3D OMS__STUDIO</h1>
+        <div class="studio-name"></div>
+        <button class="settings-button" onclick="openSettings()">
+            <svg viewBox="0 0 24 24">
+                <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="main-container">
+        <!-- Section Upload -->
+        <div class="upload-section animate-on-scroll" id="uploadSection">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".png" />
+                <button class="file-input-button">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                    </svg>
+                    Choisir une image PNG
+                </button>
+            </div>
+            <p>Ou glissez-déposez votre fichier PNG ici</p>
+            
+            <div class="file-preview" id="filePreview">
+                <img id="previewImage" src="" alt="Aperçu" />
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+        </div>
+
+        <!-- Section Aperçu 3D -->
+        <div class="viewer-section animate-on-scroll">
+            <h3 style="margin-bottom: 20px; color: var(--text-color); font-weight: 600;">
+                🎨 Aperçu 3D en temps réel
+            </h3>
+            <div class="viewer-container">
+                <div class="viewer-placeholder" id="viewerPlaceholder">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+                    </svg>
+                    <p>Votre modèle 3D apparaîtra ici</p>
+                    <small>Convertissez une image PNG pour voir l'aperçu</small>
+                </div>
+                <canvas id="threejs-viewer"></canvas>
+            </div>
+            <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9rem;">
+                <p>🖱️ Clic gauche : rotation • 🖱️ Molette : zoom • 🖱️ Clic droit : panoramique</p>
+            </div>
+        </div>
+
+        <!-- Section Contrôles -->
+        <div class="controls-section animate-on-scroll">
+            <div class="options-group">
+                <h3>⚙️ Paramètres de conversion</h3>
+                
+                <div class="option-item">
+                    <label for="extrusionHeight">
+                        📏 Hauteur d'extrusion: 
+                        <span class="range-value" id="extrusionValue">1.0</span>
+                    </label>
+                    <input type="range" id="extrusionHeight" min="0.1" max="5.0" step="0.1" value="1.0" class="slider-custom" />
+                </div>
+
+                <div class="option-item">
+                    <label for="simplifyTolerance">
+                        🔧 Simplification: 
+                        <span class="range-value" id="simplifyValue">0.005</span>
+                    </label>
+                    <input type="range" id="simplifyTolerance" min="0.001" max="0.02" step="0.001" value="0.005" class="slider-custom" />
+                </div>
+            </div>
+
+            <button class="convert-button btn-gradient" id="convertButton" disabled>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+                </svg>
+                🚀 Convertir en 3D
+            </button>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill progress-animated" id="progressFill"></div>
+                </div>
+                <div class="progress-text loading-dots" id="progressText">Conversion en cours</div>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <h4 id="resultTitle">✅ Conversion réussie !</h4>
+                <p id="resultMessage">Votre modèle 3D est prêt à être téléchargé.</p>
+                <a href="#" class="download-button" id="downloadButton">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                    </svg>
+                    📥 Télécharger le fichier OBJ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal des paramètres -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>⚙️ Paramètres du Studio</h2>
+                <button class="close-button" onclick="closeSettings()">&times;</button>
+            </div>
+
+            <div class="setting-group">
+                <label for="userName">👤 Prénom :</label>
+                <input type="text" id="userName" placeholder="Votre prénom" class="input-floating">
+            </div>
+
+            <div class="setting-group">
+                <label for="userSurname">👤 Nom :</label>
+                <input type="text" id="userSurname" placeholder="Votre nom" class="input-floating">
+            </div>
+
+            <div class="setting-group">
+                <label for="backgroundType">🎨 Type de fond :</label>
+                <select id="backgroundType">
+                    <option value="gradient">Dégradé par défaut</option>
+                    <option value="solid">Couleur unie</option>
+                    <option value="custom-gradient">Dégradé personnalisé</option>
+                </select>
+            </div>
+
+            <div class="setting-group" id="primaryColorGroup">
+                <label for="primaryColor">🎨 Couleur principale :</label>
+                <div class="color-picker-group">
+                    <input type="text" id="primaryColorText" placeholder="#667eea">
+                    <input type="color" id="primaryColor" class="color-picker" value="#667eea">
+                </div>
+            </div>
+
+            <div class="setting-group" id="secondaryColorGroup">
+                <label for="secondaryColor">🎨 Couleur secondaire :</label>
+                <div class="color-picker-group">
+                    <input type="text" id="secondaryColorText" placeholder="#764ba2">
+                    <input type="color" id="secondaryColor" class="color-picker" value="#764ba2">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="accentColor">🎨 Couleur d'accent :</label>
+                <div class="color-picker-group">
+                    <input type="text" id="accentColorText" placeholder="#28a745">
+                    <input type="color" id="accentColor" class="color-picker" value="#28a745">
+                </div>
+            </div>
+
+            <div class="advanced-options">
+                <h3 style="margin-bottom: 15px; color: var(--text-color);">🔧 Options avancées</h3>
+                
+                <div class="setting-row">
+                    <label>✨ Effets d'animation :</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableAnimations" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label>💎 Effet de verre :</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableGlassEffect">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="save-settings-button" onclick="saveSettings()">
+                💾 Sauvegarder les paramètres
+            </button>
+        </div>
+    </div>
+
+    <script src="theme-manager.js"></script>
+    <script>
+        // Variables globales
+        let selectedFile = null;
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+
+        // Éléments DOM
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const filePreview = document.getElementById('filePreview');
+        const previewImage = document.getElementById('previewImage');
+        const fileInfo = document.getElementById('fileInfo');
+        const convertButton = document.getElementById('convertButton');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultSection = document.getElementById('resultSection');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultMessage = document.getElementById('resultMessage');
+        const downloadButton = document.getElementById('downloadButton');
+        const extrusionHeight = document.getElementById('extrusionHeight');
+        const extrusionValue = document.getElementById('extrusionValue');
+        const simplifyTolerance = document.getElementById('simplifyTolerance');
+        const simplifyValue = document.getElementById('simplifyValue');
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initThreeJS();
+            setupEventListeners();
+            
+            // Ajouter les classes d'animation aux éléments
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+            });
+            
+            // Déclencher les animations après un court délai
+            setTimeout(() => {
+                document.querySelectorAll('.animate-on-scroll').forEach((el, index) => {
+                    setTimeout(() => {
+                        el.style.transition = 'all 0.8s ease-out';
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, index * 200);
+                });
+            }, 100);
+        });
+
+        function setupEventListeners() {
+            // Mise à jour des valeurs des sliders
+            extrusionHeight.addEventListener('input', (e) => {
+                extrusionValue.textContent = e.target.value;
+                updateModelPreview();
+            });
+
+            simplifyTolerance.addEventListener('input', (e) => {
+                simplifyValue.textContent = e.target.value;
+                updateModelPreview();
+            });
+
+            // Gestion du drag & drop
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.classList.add('dragover');
+            });
+
+            uploadSection.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+            });
+
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+
+            // Gestion de la sélection de fichier
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+
+            // Gestion de la conversion
+            convertButton.addEventListener('click', convertToOBJ);
+
+            // Synchronisation des color pickers
+            setupColorPickerSync('primaryColor', 'primaryColorText');
+            setupColorPickerSync('secondaryColor', 'secondaryColorText');
+            setupColorPickerSync('accentColor', 'accentColorText');
+        }
+
+        function setupColorPickerSync(colorId, textId) {
+            const colorPicker = document.getElementById(colorId);
+            const textInput = document.getElementById(textId);
+
+            if (colorPicker && textInput) {
+                colorPicker.addEventListener('input', (e) => {
+                    textInput.value = e.target.value;
+                });
+
+                textInput.addEventListener('input', (e) => {
+                    if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                        colorPicker.value = e.target.value;
+                    }
+                });
+            }
+        }
+
+        function initThreeJS() {
+            const canvas = document.getElementById('threejs-viewer');
+            const container = canvas.parentElement;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf5f5f5);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(3, 3, 3);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setClearColor(0xf5f5f5);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 1;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Ajouter un plan de sol
+            const planeGeometry = new THREE.PlaneGeometry(10, 10);
+            const planeMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xffffff, 
+                transparent: true, 
+                opacity: 0.5 
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.y = -1;
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            // Animation loop
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('threejs-viewer').parentElement;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function handleFileSelection(file) {
+            if (!file.type.includes('png')) {
+                showNotification('Veuillez sélectionner un fichier PNG valide.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // Afficher l'aperçu avec animation
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                filePreview.style.display = 'block';
+                filePreview.style.animation = 'fadeInScale 0.5s ease-out';
+                fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                convertButton.disabled = false;
+                
+                // Ajouter un effet de pulsation au bouton de conversion
+                convertButton.style.animation = 'pulse 2s infinite';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateModelPreview() {
+            // Mettre à jour le modèle 3D en temps réel si un fichier est sélectionné
+            if (selectedFile && currentModel) {
+                // Ici on pourrait implémenter une mise à jour en temps réel
+                // Pour l'instant, on se contente d'un feedback visuel
+                const viewer = document.getElementById('threejs-viewer');
+                viewer.style.filter = 'brightness(1.1)';
+                setTimeout(() => {
+                    viewer.style.filter = 'brightness(1)';
+                }, 200);
+            }
+        }
+
+        async function convertToOBJ() {
+            if (!selectedFile) return;
+
+            // Réinitialiser l'interface
+            resultSection.style.display = 'none';
+            progressSection.style.display = 'block';
+            convertButton.disabled = true;
+            convertButton.style.animation = 'none';
+
+            // Simuler le progrès avec une animation plus fluide
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 10 + 5;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = progress + '%';
+                
+                // Mettre à jour le texte de progression
+                if (progress < 30) {
+                    progressText.textContent = 'Analyse de l\'image';
+                } else if (progress < 60) {
+                    progressText.textContent = 'Détection des contours';
+                } else if (progress < 90) {
+                    progressText.textContent = 'Génération du modèle 3D';
+                }
+            }, 150);
+
+            try {
+                // Préparer les données du formulaire
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('extrusion_height', extrusionHeight.value);
+                formData.append('simplify_tolerance', simplifyTolerance.value);
+
+                // Envoyer la requête
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Finalisation';
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Charger le modèle 3D dans le viewer
+                    loadOBJModel(url);
+                    
+                    // Afficher le résultat de succès avec animation
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        resultSection.style.display = 'block';
+                        resultSection.classList.remove('error');
+                        resultSection.style.animation = 'fadeInScale 0.5s ease-out';
+                        resultTitle.textContent = '✅ Conversion réussie !';
+                        resultMessage.textContent = 'Votre modèle 3D est prêt à être téléchargé.';
+                        downloadButton.href = url;
+                        downloadButton.download = selectedFile.name.replace('.png', '.obj');
+                        convertButton.disabled = false;
+                        
+                        // Effet de confettis (simulation)
+                        showNotification('🎉 Modèle 3D généré avec succès !', 'success');
+                    }, 800);
+                } else {
+                    throw new Error('Erreur lors de la conversion');
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                
+                // Afficher l'erreur avec animation
+                setTimeout(() => {
+                    progressSection.style.display = 'none';
+                    resultSection.style.display = 'block';
+                    resultSection.classList.add('error');
+                    resultSection.style.animation = 'fadeInScale 0.5s ease-out';
+                    resultTitle.textContent = '❌ Erreur de conversion';
+                    resultMessage.textContent = 'Une erreur est survenue lors de la conversion. Veuillez réessayer.';
+                    convertButton.disabled = false;
+                    
+                    showNotification('Erreur lors de la conversion. Veuillez réessayer.', 'error');
+                }, 500);
+            }
+        }
+
+        function loadOBJModel(url) {
+            // Supprimer le modèle précédent avec animation
+            if (currentModel) {
+                const fadeOut = () => {
+                    currentModel.scale.multiplyScalar(0.95);
+                    if (currentModel.scale.x > 0.1) {
+                        requestAnimationFrame(fadeOut);
+                    } else {
+                        scene.remove(currentModel);
+                    }
+                };
+                fadeOut();
+            }
+
+            // Charger le nouveau modèle
+            const loader = new THREE.OBJLoader();
+            loader.load(url, (object) => {
+                // Centrer et redimensionner le modèle
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                object.position.sub(center);
+                
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 2 / maxDim;
+                object.scale.setScalar(scale);
+
+                // Ajouter un matériau avec dégradé
+                const primaryColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--primary-color').trim();
+                
+                object.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshLambertMaterial({ 
+                            color: primaryColor || '#667eea',
+                            transparent: true,
+                            opacity: 0.9
+                        });
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                // Animation d'apparition
+                object.scale.setScalar(0);
+                scene.add(object);
+                currentModel = object;
+
+                const scaleUp = () => {
+                    object.scale.addScalar(0.05);
+                    if (object.scale.x < scale) {
+                        requestAnimationFrame(scaleUp);
+                    } else {
+                        object.scale.setScalar(scale);
+                    }
+                };
+                scaleUp();
+
+                // Masquer le placeholder et afficher le viewer
+                document.getElementById('viewerPlaceholder').style.display = 'none';
+                document.getElementById('threejs-viewer').style.display = 'block';
+
+                // Ajuster la caméra avec animation
+                camera.position.set(3, 3, 3);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+                
+                // Activer la rotation automatique
+                controls.autoRotate = true;
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#f8d7da' : type === 'success' ? '#d4edda' : '#d1ecf1'};
+                color: ${type === 'error' ? '#721c24' : type === 'success' ? '#155724' : '#0c5460'};
+                padding: 15px 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                animation: slideInRight 0.5s ease-out;
+                max-width: 300px;
+                font-weight: 500;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideInRight 0.5s ease-out reverse';
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+
+        // Fonctions des paramètres
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function saveSettings() {
+            const settings = {
+                userName: document.getElementById('userName').value || 'Utilisateur',
+                userSurname: document.getElementById('userSurname').value || 'Studio',
+                backgroundType: document.getElementById('backgroundType').value,
+                primaryColor: document.getElementById('primaryColor').value,
+                secondaryColor: document.getElementById('secondaryColor').value,
+                accentColor: document.getElementById('accentColor').value,
+                enableAnimations: document.getElementById('enableAnimations').checked,
+                enableGlassEffect: document.getElementById('enableGlassEffect').checked
+            };
+
+            localStorage.setItem('studioSettings', JSON.stringify(settings));
+            
+            if (window.themeManager) {
+                window.themeManager.customSettings = settings;
+                window.themeManager.applySettings(settings);
+            }
+            
+            closeSettings();
+            showNotification('Paramètres sauvegardés avec succès !', 'success');
+        }
+
+        // Fermer le modal en cliquant à l'extérieur
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('settingsModal');
+            if (e.target === modal) {
+                closeSettings();
+            }
+        });
+
+        // Raccourcis clavier
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSettings();
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (document.getElementById('settingsModal').style.display === 'block') {
+                    saveSettings();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

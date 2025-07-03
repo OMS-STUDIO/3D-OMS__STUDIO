@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNG to OBJ Converter - Convertisseur 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #e8f2ff;
+            transform: scale(1.02);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-preview {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .file-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .options-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .options-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        .option-group label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .option-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .option-group input[type="number"] {
+            width: 100px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .range-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .convert-button {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .convert-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .convert-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .progress-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        .result-section {
+            display: none;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-section.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .download-button {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .upload-section, .options-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 PNG to OBJ Converter</h1>
+            <p>Transformez vos images PNG en modèles 3D prêts pour Blender</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".png" />
+                <button class="file-input-button">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                    </svg>
+                    Choisir une image PNG
+                </button>
+            </div>
+            <p>Ou glissez-déposez votre fichier PNG ici</p>
+            
+            <div class="file-preview" id="filePreview">
+                <img id="previewImage" src="" alt="Aperçu" />
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+        </div>
+
+        <div class="options-section">
+            <h3>⚙️ Options de conversion</h3>
+            
+            <div class="option-group">
+                <label for="extrusionHeight">Hauteur d'extrusion: <span class="range-value" id="extrusionValue">1.0</span></label>
+                <input type="range" id="extrusionHeight" min="0.1" max="5.0" step="0.1" value="1.0" />
+            </div>
+
+            <div class="option-group">
+                <label for="simplifyTolerance">Simplification des contours: <span class="range-value" id="simplifyValue">0.005</span></label>
+                <input type="range" id="simplifyTolerance" min="0.001" max="0.02" step="0.001" value="0.005" />
+            </div>
+        </div>
+
+        <button class="convert-button" id="convertButton" disabled>
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+            </svg>
+            Convertir en 3D
+        </button>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Conversion en cours...</div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <h4 id="resultTitle">✅ Conversion réussie !</h4>
+            <p id="resultMessage">Votre modèle 3D est prêt à être téléchargé.</p>
+            <a href="#" class="download-button" id="downloadButton">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                </svg>
+                Télécharger le fichier OBJ
+            </a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>🔒 Service privé et gratuit • 🚀 Conversion locale • 📁 Aucune donnée stockée</p>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const filePreview = document.getElementById('filePreview');
+        const previewImage = document.getElementById('previewImage');
+        const fileInfo = document.getElementById('fileInfo');
+        const convertButton = document.getElementById('convertButton');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultSection = document.getElementById('resultSection');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultMessage = document.getElementById('resultMessage');
+        const downloadButton = document.getElementById('downloadButton');
+        const extrusionHeight = document.getElementById('extrusionHeight');
+        const extrusionValue = document.getElementById('extrusionValue');
+        const simplifyTolerance = document.getElementById('simplifyTolerance');
+        const simplifyValue = document.getElementById('simplifyValue');
+
+        let selectedFile = null;
+
+        // Mise à jour des valeurs des sliders
+        extrusionHeight.addEventListener('input', (e) => {
+            extrusionValue.textContent = e.target.value;
+        });
+
+        simplifyTolerance.addEventListener('input', (e) => {
+            simplifyValue.textContent = e.target.value;
+        });
+
+        // Gestion du drag & drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        });
+
+        // Gestion de la sélection de fichier
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (!file.type.includes('png')) {
+                alert('Veuillez sélectionner un fichier PNG valide.');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // Afficher l'aperçu
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                filePreview.style.display = 'block';
+                fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                convertButton.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Gestion de la conversion
+        convertButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // Réinitialiser l'interface
+            resultSection.style.display = 'none';
+            progressSection.style.display = 'block';
+            convertButton.disabled = true;
+
+            // Simuler le progrès
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = progress + '%';
+            }, 200);
+
+            try {
+                // Préparer les données du formulaire
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('extrusion_height', extrusionHeight.value);
+                formData.append('simplify_tolerance', simplifyTolerance.value);
+
+                // Envoyer la requête
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Afficher le résultat de succès
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        resultSection.style.display = 'block';
+                        resultSection.classList.remove('error');
+                        resultTitle.textContent = '✅ Conversion réussie !';
+                        resultMessage.textContent = 'Votre modèle 3D est prêt à être téléchargé.';
+                        downloadButton.href = url;
+                        downloadButton.download = selectedFile.name.replace('.png', '.obj');
+                        convertButton.disabled = false;
+                    }, 500);
+                } else {
+                    throw new Error('Erreur lors de la conversion');
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                
+                // Afficher l'erreur
+                setTimeout(() => {
+                    progressSection.style.display = 'none';
+                    resultSection.style.display = 'block';
+                    resultSection.classList.add('error');
+                    resultTitle.textContent = '❌ Erreur de conversion';
+                    resultMessage.textContent = 'Une erreur est survenue lors de la conversion. Veuillez réessayer.';
+                    convertButton.disabled = false;
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>
